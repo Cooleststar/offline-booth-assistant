@@ -1,0 +1,57 @@
+/* Base settings for mobile-first design */
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: #2F4F4F; /* Slate Gray */
+    color: #FAEBD7; /* Antiquewhite */
+    margin: 0;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* The Grid System for Inventory */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+/* Massive, easy-to-tap Inventory Cards */
+.card {
+    background-color: #000080; /* Navy Blue */
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: transform 0.1s ease;
+}
+
+.card:active {
+    transform: scale(0.95); /* Satisfying physical tap feedback */
+}
+
+.card h2 {
+    font-size: 1.1rem;
+    margin: 0 0 10px 0;
+}
+
+.stock-count {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* The Sell Button */
+.sell-btn {
+    background-color: #FAEBD7;
+    color: #000080;
+    border: none;
+    padding: 15px;
+    width: 100%;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}

@@ -1,0 +1,23 @@
+{
+    "status": "Open",
+    "items": [
+        {
+            "id": "mostima_stand",
+            "name": "Mostima Acrylic Stand",
+            "price": 25,
+            "stock": 7
+        },
+        {
+            "id": "sinon_print",
+            "name": "Sinon Sniper Print",
+            "price": 20,
+            "stock": 30
+        },
+        {
+            "id": "theme_badge",
+            "name": "Character Enamel Badge",
+            "price": 10,
+            "stock": 50
+        }
+    ]
+}
