@@ -3,19 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sena-Sign Booth Tracker</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Sena-Sign | Storefront</title>
+    <style>
+        body { background-color: #1e1e24; color: #faebd7; font-family: sans-serif; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .btn { padding: 12px 15px; text-decoration: none; border-radius: 5px; font-size: 14px; border: none; cursor: pointer; color: #faebd7; background-color: #1a365d; font-weight: bold; transition: background-color 0.2s; }
+        .btn:hover { background-color: #2a4365; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; color: #888; }
+        .action-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 15px; }
+        .action-buttons .btn { flex: 1; text-align: center; }
+        .search-container { margin-bottom: 30px; }
+        .search-bar { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #444; background-color: #2b2b36; color: #faebd7; font-size: 16px; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .card { background-color: #2b2b36; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #3a3a4a; }
+        .img-placeholder { width: 60px; height: 60px; border-radius: 50%; background-color: #444; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .sale-btn { background-color: #e74c3c; width: 100%; margin-top: 15px; }
+        .sale-btn:hover:not(:disabled) { background-color: #c0392b; }
+        .price { font-size: 20px; color: #88B04B; font-weight: bold; margin: 10px 0; }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 10;
+            left: 50%;
+            top: 20px; 
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.6);
+            border: 1px solid #555;
+        }
+        #toast.show { visibility: visible; animation: dropin 0.3s; }
+        .toast-btn { background-color: #f39c12; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 15px; }
+        @keyframes dropin { from {top: -50px; opacity: 0;} to {top: 20px; opacity: 1;} }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Sena-Sign Dashboard</h1>
-        <div class="status-badge">Booth: <span id="booth-status">Loading...</span></div>
-    </header>
-
-    <main>
-        <div id="inventory-grid" class="grid-container"></div>
-    </main>
-
-    <script src="/static/app.js"></script>
+    <div class="header">
+        <h1 style="margin-bottom: 5px;">Sena-Sign</h1>
+        <div class="action-buttons">
+            <a href="/export_csv" class="btn">📊 Download CSV</a>
+            <a href="/admin" class="btn">⚙ Admin Panel</a>
+        </div>
+    </div>
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search merchandise..." onkeyup="filterItems()">
+    </div>
+    <div class="grid">
+        {% for item_id, details in inventory.items() %}
+            <div class="card" data-name="{{ details.name | lower }}">
+                <div class="img-placeholder">📦</div>
+                <h3>{{ details.name }}</h3>
+                <div class="price">${{ "%.2f"|format(details.price) }}</div>
+                <p>Stock: <strong id="stock-{{ item_id }}">{{ details.quantity }}</strong></p>
+                <p style="color: #aaa; font-size: 12px;">Sold: <span id="sold-{{ item_id }}">{{ details.sold }}</span></p>
+                <button onclick="logSale('{{ item_id }}', '{{ details.name | replace('\'', '\\\'') }}')" class="btn sale-btn" id="btn-{{ item_id }}" {% if details.quantity <= 0 %}disabled{% endif %}>
+                    {% if details.quantity > 0 %} Log Sale (-1) {% else %} OUT OF STOCK {% endif %}
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    <div id="toast">
+        <span id="toast-message">Sold</span>
+        <button onclick="triggerUndo()" class="toast-btn">UNDO</button>
+    </div>
+    <script>
+        let saleHistory = [];
+        let toastTimeout;
+        function filterItems() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let cards = document.getElementsByClassName('card');
+            for (let i = 0; i < cards.length; i++) {
+                let itemName = cards[i].getAttribute('data-name');
+                cards[i].style.display = itemName.includes(input) ? "" : "none";
+            }
+        }
+        function logSale(itemId, itemName) {
+            fetch(`/record_sale/${itemId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById(`stock-${itemId}`).innerText = data.new_stock;
+                    document.getElementById(`sold-${itemId}`).innerText = data.new_sold;
+                    if (data.new_stock <= 0) {
+                        let btn = document.getElementById(`btn-${itemId}`);
+                        btn.disabled = true;
+                        btn.innerText = "OUT OF STOCK";
+                    }
+                    saleHistory.push({id: itemId, name: itemName});
+                    showToast();
+                }
+            });
+        }
+        function triggerUndo() {
+            if (saleHistory.length === 0) return;
+            let lastSale = saleHistory.pop(); 
+            fetch(`/undo_sale/${lastSale.id}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById(`stock-${lastSale.id}`).innerText = data.new_stock;
+                    document.getElementById(`sold-${lastSale.id}`).innerText = data.new_sold;
+                    let btn = document.getElementById(`btn-${lastSale.id}`);
+                    btn.disabled = false;
+                    btn.innerText = "Log Sale (-1)";
+                    if (saleHistory.length > 0) {
+                        showToast();
+                    } else {
+                        hideToast();
+                    }
+                }
+            });
+        }
+        function showToast() {
+            if (saleHistory.length === 0) return;
+            let lastSale = saleHistory[saleHistory.length - 1];
+            let message = `Sold: ${lastSale.name}`;
+            if (saleHistory.length > 1) {
+                message += ` (${saleHistory.length} actions logged)`;
+            }
+            let toast = document.getElementById("toast");
+            document.getElementById("toast-message").innerText = message;
+            toast.className = "show";
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(function() { 
+                saleHistory = []; 
+                hideToast(); 
+            }, 5000);
+        }
+        function hideToast() {
+            document.getElementById("toast").className = "";
+        }
+    </script>
 </body>
 </html>

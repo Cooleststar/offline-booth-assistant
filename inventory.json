@@ -1,0 +1,20 @@
+{
+    "item_01": {
+        "name": "Sinon photobook",
+        "price": 20.0,
+        "quantity": 19,
+        "sold": 11
+    },
+    "item_02": {
+        "name": "A4 Poster",
+        "price": 10.0,
+        "quantity": 28,
+        "sold": 0
+    },
+    "item_03": {
+        "name": "Everyone's penisssssss",
+        "price": 1000.0,
+        "quantity": 10,
+        "sold": 0
+    }
+}
