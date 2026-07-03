@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sena-Sign | Admin Control</title>
+    <style>
+        body { background-color: #1e1e24; color: #faebd7; font-family: sans-serif; padding: 20px; } 
+        .container { max-width: 700px; margin: 0 auto; background-color: #2b2b36; padding: 25px; border-radius: 10px; } 
+        input { width: 100%; padding: 10px; margin: 8px 0 18px 0; border-radius: 5px; border: 1px solid #444; background: #1e1e24; color: #fff; box-sizing: border-box; } 
+        button { padding: 10px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; } 
+        .add-btn { background-color: #4CAF50; width: 100%; padding: 15px; font-size: 16px; } 
+        .edit-info-btn { background-color: #3498db; padding: 8px 12px; } 
+        .delete-btn { background-color: #c0392b; padding: 8px 12px; } 
+        .back-link { display: block; margin-bottom: 20px; color: #88B04B; text-decoration: none; font-weight: bold; } 
+        
+        /* THE LAYOUT FIX: Stacks items cleanly so buttons don't get crushed */
+        .item-row { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 15px 0; border-bottom: 1px solid #444; } 
+        .item-details { width: 100%; text-align: left; } 
+        .item-actions { display: flex; gap: 8px; width: 100%; justify-content: flex-end; } 
+        
+        .inline-form { display: inline; margin: 0; } 
+        .details-edit-panel { display: none; width: 100%; margin-top: 10px; background-color: #1e1e24; padding: 15px; border-radius: 8px; border: 1px dashed #555; box-sizing: border-box; } 
+        .danger-zone { background-color: #3b2020; border: 1px solid #c0392b; padding: 10px; border-radius: 5px; margin-bottom: 15px; } 
+        .danger-zone input { border: 1px solid #e74c3c; background-color: #2b1111; color: #ff9999; margin-bottom: 5px; }
+        
+        /* Power Controls CSS */
+        .power-section { background-color: #1a1a20; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-top: 40px; text-align: center; }
+        .power-btn { width: 100%; padding: 15px; margin-bottom: 10px; font-size: 15px; }
+        .restart-btn { background-color: #555; }
+        .shutdown-btn { background-color: #8b0000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Storefront (店舗画面に戻る)</a>
+        
+        <h2>Add New Merchandise (新商品の追加)</h2>
+        <form action="/add_item" method="POST">
+            <label>Display Name (商品名):</label>
+            <input type="text" name="item_name" required>
+            
+            <label>Price / 価格 ($):</label>
+            <input type="number" step="0.01" name="item_price" required>
+            
+            <label>Starting Stock (初期在庫):</label>
+            <input type="number" name="item_stock" required>
+            
+            <button type="submit" class="add-btn">Add to Inventory (追加する)</button>
+        </form>
+
+        <hr style="border-color: #444; margin: 40px 0;">
+
+        <h2>Manage Existing Inventory (在庫管理)</h2>
+        <div>
+        {% for item_id, details in inventory.items() %}
+            <div class="item-row">
+                <div class="item-details">
+                    <strong style="font-size: 18px;">{{ details.name }}</strong><br>
+                    <span style="color: #88B04B;">${{ "%.2f"|format(details.price) }}</span> | Stock: {{ details.quantity }} | Sold: {{ details.sold }}
+                </div>
+                <div class="item-actions">
+                    <button type="button" class="edit-info-btn" onclick="document.getElementById('edit-{{ item_id }}').style.display='block'">Edit (編集)</button>
+                    <form action="/delete_item/{{ item_id }}" method="POST" class="inline-form" onsubmit="return confirm('Permanently delete? (完全に削除しますか？)');">
+                        <button type="submit" class="delete-btn">Delete (削除)</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="edit-{{ item_id }}" class="details-edit-panel">
+                <form action="/edit_details/{{ item_id }}" method="POST" onsubmit="return confirm('Save changes? (変更を保存しますか？)');">
+                    <label style="font-size: 12px; color: #aaa;">Edit Name (商品名の編集):</label>
+                    <input type="text" name="edit_name" value="{{ details.name }}" required style="margin-bottom: 10px;">
+                    
+                    <label style="font-size: 12px; color: #aaa;">Edit Price (価格の編集) ($):</label>
+                    <input type="number" step="0.01" name="edit_price" value="{{ details.price }}" required style="margin-bottom: 10px;">
+                    
+                    <label style="font-size: 12px; color: #aaa;">Edit Stock Quantity (在庫数の編集):</label>
+                    <input type="number" name="edit_stock" value="{{ details.quantity }}" required style="margin-bottom: 15px;">
+                    
+                    <div class="danger-zone">
+                        <label style="font-size: 12px; color: #ff9999; font-weight: bold;">⚠️ Edit Units Sold (販売数の編集 - 売上計算に影響します):</label>
+                        <input type="number" name="edit_sold" value="{{ details.sold }}" required>
+                    </div>
+                    
+                    <button type="submit" class="edit-info-btn" style="width: 100%; margin-bottom: 8px;">Save All Changes (保存)</button>
+                    <button type="button" class="delete-btn" style="width: 100%; background-color: #555;" onclick="document.getElementById('edit-{{ item_id }}').style.display='none'">Cancel (キャンセル)</button>
+                </form>
+            </div>
+        {% endfor %}
+        </div>
+
+        <hr style="border-color: #444; margin: 40px 0;">
+
+        <h2>⚙️ System Patch (システムパッチ)</h2>
+        <p style="font-size: 13px; color: #aaa;">Upload an updated <strong>app.py</strong>, <strong>index.html</strong>, or <strong>admin.html</strong> file.</p>
+        <form action="/upload_patch" method="POST" enctype="multipart/form-data">
+            <input type="file" name="patch_file" accept=".py,.html" required style="border: none; padding: 0;">
+            <button type="submit" class="add-btn" style="background-color: #3498db; margin-top: 10px;">Upload & Apply (適用する)</button>
+        </form>
+
+        <div class="power-section">
+            <h3 style="margin-top: 0;">Power Controls (電源)</h3>
+            <button onclick="systemControl('reboot')" class="power-btn restart-btn">🔄 Restart System (再起動)</button>
+            <button onclick="systemControl('shutdown')" class="power-btn shutdown-btn">🔴 Shutdown (電源を切る)</button>
+        </div>
+    </div>
+
+    <script>
+        function systemControl(action) {
+            let msg = action === 'reboot' ? 'Restart the system? (システムを再起動しますか？)' : 'Safely shutdown the system? (安全にシャットダウンしますか？)';
+            if (confirm(msg)) {
+                fetch(`/system/${action}`, { method: 'POST' });
+                if (action === 'shutdown') {
+                    document.body.innerHTML = `<div style="text-align:center; padding-top: 30vh; font-family: sans-serif; color: #faebd7;">
+                        <h2>Shutting Down... (シャットダウン中...)</h2>
+                        <p style="color: #aaa; margin-top: 20px;">Please wait 10 seconds, then it is safe to unplug the power bank.<br>10秒後、モバイルバッテリーを安全に取り外せます。</p>
+                    </div>`;
+                } else {
+                    document.body.innerHTML = `<div style="text-align:center; padding-top: 30vh; font-family: sans-serif; color: #faebd7;">
+                        <h2>Restarting... (再起動中...)</h2>
+                        <p style="color: #aaa; margin-top: 20px;">Please wait 45 seconds, then refresh this page.<br>45秒後にページを更新してください。</p>
+                    </div>`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
